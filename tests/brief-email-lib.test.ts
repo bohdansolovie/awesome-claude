@@ -169,6 +169,16 @@ describe("cardHtml", () => {
     expect(html).not.toContain("text-transform:uppercase");
     expect(html).not.toContain("line-height:1.5");
   });
+
+  it("falls back when url and title are missing", () => {
+    const html = cardHtml({ description: "No title or url" }, siteUrl);
+    expect(html).toContain('href="https://heyclau.de"');
+    expect(html).not.toContain("Demo Entry");
+
+    const titled = cardHtml({ title: "No Url" }, siteUrl);
+    expect(titled).toContain('href="https://heyclau.de"');
+    expect(titled).toContain("No Url");
+  });
 });
 
 describe("overflowRowHtml", () => {
@@ -183,6 +193,14 @@ describe("overflowRowHtml", () => {
       siteUrl,
     );
     expect(bare).not.toContain("text-transform:uppercase");
+  });
+
+  it("falls back to the site url when item url is missing", () => {
+    const html = overflowRowHtml({ title: "No Url" }, siteUrl);
+    expect(html).toContain('href="https://heyclau.de"');
+
+    const noTitle = overflowRowHtml({}, siteUrl);
+    expect(noTitle).toContain('href="https://heyclau.de"');
   });
 });
 
@@ -243,6 +261,24 @@ describe("sectionText", () => {
     expect(text).toContain(
       "Overflow 4 [MCP server] — https://heyclau.de/entry/mcp/o4",
     );
+  });
+
+  it("omits featured descriptions and falls back when urls are missing", () => {
+    const text = sectionText(SECTIONS[0], [{ title: "No Meta" }], siteUrl);
+    expect(text).not.toContain("A useful MCP server");
+    expect(text).toContain("https://heyclau.de");
+    expect(text).not.toContain("/entry/mcp/demo");
+  });
+
+  it("falls back for overflow rows without urls", () => {
+    const rows = [
+      ...Array.from({ length: 4 }, (_, index) =>
+        item({ title: `Featured ${index}` }),
+      ),
+      { title: "Overflow No Url" },
+    ];
+    const text = sectionText(SECTIONS[0], rows, siteUrl);
+    expect(text).toContain("Overflow No Url [] — https://heyclau.de");
   });
 });
 
@@ -349,5 +385,15 @@ describe("buildBriefEmail", () => {
       dateLabel: "2026-06-19",
     });
     expect(result.text).toContain("https://heyclau.de/entry/mcp/relative");
+  });
+
+  it("handles brief payloads without a sections object", () => {
+    const result = buildBriefEmail({
+      brief: { summary: { newEntryCount: 0 } },
+      siteUrl,
+      dateLabel: "2026-06-19",
+    });
+    expect(result.html).toContain("No notable activity this week.");
+    expect(result.text).not.toContain("NEW THIS WEEK");
   });
 });
